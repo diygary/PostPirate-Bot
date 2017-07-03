@@ -10,7 +10,8 @@ CURLcode getBearerToken(std::string* keyvar);
 CURLcode getOAuth(std::string* oTokenVar);
 CURLcode getCurrentTrend(std::string* trendvar);
 CURLcode getTrendTweet(std::string trend, std::string* tweetvar);
-CURLcode postTrendTweet(std::string trend);
+CURLcode postTrendTweet(std::string trendTweet);
+std::string parseTrendTweet(std::string trendTweet);
 std::string hexStringtoASCII(std::string hexString);
 std::string getRandomString();
 size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata);
@@ -38,12 +39,15 @@ int main() {
         //stop2=getOAuth(&oAuthToken);
         std::cout<<"\nStarting loop\n";
         while(!stop1) { //Come back and add stop2 for fun (get OAuth) which is now added in accessToken/accessSecret
-            if((std::time(NULL) - time0)>=(150000)) {//Get current time and check if 15 minutes have passed since last time
+            if((std::time(NULL) - time0)>=(900)) {//Get current time and check if 15 minutes have passed since last time
                 std::string currentTrend="",currentTrendTweet="";
                 if(!getCurrentTrend(&currentTrend)) {
                     std::cout<<currentTrend<<":Trend\n";
                     if(!getTrendTweet(currentTrend,&currentTrendTweet)) {
                         std::cout<<currentTrendTweet<<":Trend Tweet\n";
+                        if(!postTrendTweet(currentTrendTweet)) {
+                            std::cout<<"Posted.\n";
+                        }
                     }
                 }
                 time0 = std::time(NULL); //Reset timer
@@ -97,7 +101,7 @@ CURLcode getCurrentTrend(std::string* trendvar) {
     tokenheader=curl_slist_append(tokenheader,"Accept-Charset: utf-8");
     tokenheader=curl_slist_append(tokenheader,"Accept-Encoding: identity");
     curl_easy_setopt(active,CURLOPT_HTTPGET,1L);
-    curl_easy_setopt(active,CURLOPT_URL,"https://api.twitter.com/1.1/trends/place.json?id=1");
+    curl_easy_setopt(active,CURLOPT_URL,"https://api.twitter.com/1.1/trends/place.json?id=23424977");
     curl_easy_setopt(active,CURLOPT_USERAGENT,"PostPirate v1.0");
     curl_easy_setopt(active,CURLOPT_WRITEFUNCTION,write_callback);
     curl_easy_setopt(active,CURLOPT_VERBOSE,0);
@@ -127,7 +131,7 @@ CURLcode getTrendTweet(std::string trend, std::string* tweetvar) {
     std::string requestTime=std::to_string(static_cast<long>(std::time(NULL)));
     std::string randomString=getRandomString();
     tokenheader=curl_slist_append(tokenheader,"Content-Type: application/x-www-form-urlencoded");
-    std::string host_baseURL="https://api.twitter.com/1.1/users/search.json";
+    std::string host_baseURL="https://api.twitter.com/1.1/search/tweets.json";
     std::string host=host_baseURL+"?q="+curl_easy_escape(active,trend.c_str(),trend.length());
     std::string host_argument="oauth_consumer_key="+authStruct.consumerKey+"&oauth_nonce="+randomString+"&oauth_signature_method=HMAC-SHA1&oauth_timestamp="+requestTime+"&oauth_token="+authStruct.accessToken+"&oauth_version=1.0&q="+std::string(curl_easy_escape(active,trend.c_str(),trend.length())); //why not just put in parameter?
     std::cout<<host_argument<<"<-host_arg\n";
@@ -145,12 +149,12 @@ CURLcode getTrendTweet(std::string trend, std::string* tweetvar) {
     curl_easy_setopt(active,CURLOPT_URL,host.c_str());
     curl_easy_setopt(active,CURLOPT_USERAGENT,"PostPirate v1.0");
     curl_easy_setopt(active,CURLOPT_WRITEFUNCTION,write_callback);
-    curl_easy_setopt(active,CURLOPT_VERBOSE,1L);
+    curl_easy_setopt(active,CURLOPT_VERBOSE,0);
     curl_easy_setopt(active,CURLOPT_HTTPHEADER,tokenheader);
     responseData.clear();
     CURLcode response_code=curl_easy_perform(active);
     if(!responseData.empty()&&response_code==NULL) {
-        *tweetvar=nlohmann::json::parse(responseData.c_str())[0]["status"]["text"];
+        *tweetvar=nlohmann::json::parse(responseData.c_str())["statuses"][0]["text"];
         std::cout<<*tweetvar<<":Text\n";
     }
     curl_easy_cleanup(active);
@@ -191,6 +195,47 @@ std::string hexStringtoASCII(std::string hexString) {
     return ASCII;
 }
 
-CURLcode postTrendTweet(std::string trend) {
-    
+CURLcode postTrendTweet(std::string trendTweet) {
+    trendTweet=parseTrendTweet(trendTweet);
+    CURL* active=curl_easy_init();
+    authencation authStruct;
+    struct curl_slist *tokenheader=NULL;
+    std::string requestTime=std::to_string(static_cast<long>(std::time(NULL)));
+    std::string randomString=getRandomString();
+    tokenheader=curl_slist_append(tokenheader,"Content-Type: application/x-www-form-urlencoded");
+    std::string host_baseURL="https://api.twitter.com/1.1/statuses/update.json";
+    std::string postStatusData=std::string("status=")+curl_easy_escape(active,trendTweet.c_str(),trendTweet.length());
+    std::string host_argument="oauth_consumer_key="+authStruct.consumerKey+"&oauth_nonce="+randomString+"&oauth_signature_method=HMAC-SHA1&oauth_timestamp="+requestTime+"&oauth_token="+authStruct.accessToken+"&oauth_version=1.0&status="+std::string(curl_easy_escape(active,trendTweet.c_str(),trendTweet.length())); //why not just put in parameter?
+    std::cout<<host_argument<<"<-host_arg\n";
+    std::string signingKey=std::string(curl_easy_escape(active,authStruct.consumerSecret.c_str(),authStruct.consumerSecret.length()))+"&"+std::string(curl_easy_escape(active,authStruct.accessSecret.c_str(),authStruct.accessSecret.length()));
+    std::cout<<signingKey<<"<-SigningKey\n";
+    std::string signatureBase=std::string("POST&")+curl_easy_escape(active,host_baseURL.c_str(),host_baseURL.length())+std::string("&")+curl_easy_escape(active,host_argument.c_str(),host_argument.length());
+    std::cout<<signatureBase<<"<-SignatureBase\n";
+    std::cout<<base64::encode(hexStringtoASCII(hmac<SHA1>(signatureBase,signingKey)))<<"<-HEXASII\n";
+    std::string signature_=curl_easy_escape(active,base64::encode(hexStringtoASCII(hmac<SHA1>(signatureBase,signingKey).c_str())).c_str(),base64::encode(hexStringtoASCII(hmac<SHA1>(signatureBase,signingKey).c_str())).length());
+    std::cout<<signature_<<"<-sig\n";
+    std::string oAuthHeader=std::string("Authorization: OAuth oauth_consumer_key=\"")+std::string(curl_easy_escape(active,authStruct.consumerKey.c_str(),authStruct.consumerKey.length()))+std::string("\", oauth_nonce=\""+std::string(curl_easy_escape(active,randomString.c_str(),randomString.length())))+std::string("\", oauth_signature=\"")+signature_+std::string("\", oauth_signature_method=\"HMAC-SHA1\", oauth_timestamp=\"")+requestTime+std::string("\", oauth_token=\"")+std::string(curl_easy_escape(active,authStruct.accessToken.c_str(),authStruct.accessToken.length()))+std::string("\", oauth_version=\"1.0\"");
+    std::cout<<oAuthHeader<<"<-OfficialHeader\n";
+    tokenheader=curl_slist_append(tokenheader,oAuthHeader.c_str());
+    curl_easy_setopt(active,CURLOPT_POSTFIELDS,postStatusData.c_str());
+    curl_easy_setopt(active,CURLOPT_URL,host_baseURL.c_str());
+    curl_easy_setopt(active,CURLOPT_USERAGENT,"PostPirate v1.0");
+    curl_easy_setopt(active,CURLOPT_WRITEFUNCTION,write_callback);
+    curl_easy_setopt(active,CURLOPT_VERBOSE,1L);
+    curl_easy_setopt(active,CURLOPT_HTTPHEADER,tokenheader);
+    responseData.clear();
+    CURLcode response_code=curl_easy_perform(active);
+    if(!responseData.empty()&&response_code==NULL) {
+        //*tweetvar=nlohmann::json::parse(responseData.c_str())[0]["status"]["text"];
+        std::cout<<responseData<<"\n";
+    }
+    curl_easy_cleanup(active);
+    return response_code;
+}
+
+std::string parseTrendTweet(std::string trendTweet) {
+    while(trendTweet.find("RT @")!=std::string::npos) { //Find mentions and remove them
+        trendTweet.erase(trendTweet.find("RT @"),trendTweet.find(":")+1);
+    }
+    return trendTweet;
 }
