@@ -1,11 +1,20 @@
 #include <iostream>
 #include <string>
+<<<<<<< HEAD
 #include "json.hpp"
 #include "hmac.h"
 #include "sha1.h"
 #include <curl/curl.h>
 #include "cppcodec/base32_default_crockford.hpp"
 #include "cppcodec/base64_default_rfc4648.hpp"
+=======
+#include <json.hpp>
+#include "hmac.h"
+#include "sha1.h"
+#include <curl/curl.h>
+#include <cppcodec/base32_default_crockford.hpp>
+#include <cppcodec/base64_default_rfc4648.hpp>
+>>>>>>> ab3fe1b7a9183223458f25d71c3c4bf02b962ff8
 CURLcode getBearerToken(std::string* keyvar);
 CURLcode getOAuth(std::string* oTokenVar);
 CURLcode getCurrentTrend(std::string* trendvar);
