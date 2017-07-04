@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeLite_Workspace Name="TwitterBot" Database="">
+  <Project Name="TwitterBot" Path="TwitterBot.project" Active="Yes"/>
+  <Project Name="KikBot" Path="../KikBot/KikBot.project" Active="No"/>
+  <Project Name="ReceptionTest" Path="ReceptionTest/ReceptionTest.project" Active="No"/>
+  <BuildMatrix>
+    <WorkspaceConfiguration Name="Debug" Selected="no">
+      <Environment/>
+      <Project Name="TwitterBot" ConfigName="Debug"/>
+      <Project Name="KikBot" ConfigName="Debug"/>
+      <Project Name="ReceptionTest" ConfigName="Debug"/>
+    </WorkspaceConfiguration>
+    <WorkspaceConfiguration Name="Release" Selected="yes">
+      <Environment/>
+      <Project Name="TwitterBot" ConfigName="Release"/>
+      <Project Name="ReceptionTest" ConfigName="Release"/>
+      <Project Name="KikBot" ConfigName="Release"/>
+    </WorkspaceConfiguration>
+  </BuildMatrix>
+</CodeLite_Workspace>
