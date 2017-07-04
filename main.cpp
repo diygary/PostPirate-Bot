@@ -1,22 +1,12 @@
 #include <iostream>
 #include <string>
-<<<<<<< HEAD
 #include "json.hpp"
 #include "hmac.h"
 #include "sha1.h"
 #include <curl/curl.h>
 #include "cppcodec/base32_default_crockford.hpp"
 #include "cppcodec/base64_default_rfc4648.hpp"
-=======
-#include <json.hpp>
-#include "hmac.h"
-#include "sha1.h"
-#include <curl/curl.h>
-#include <cppcodec/base32_default_crockford.hpp>
-#include <cppcodec/base64_default_rfc4648.hpp>
->>>>>>> ab3fe1b7a9183223458f25d71c3c4bf02b962ff8
 CURLcode getBearerToken(std::string* keyvar);
-CURLcode getOAuth(std::string* oTokenVar);
 CURLcode getCurrentTrend(std::string* trendvar);
 CURLcode getTrendTweet(std::string trend, std::string* tweetvar);
 CURLcode postTrendTweet(std::string trendTweet);
@@ -31,10 +21,8 @@ struct authencation {
     std::string pass="3494279";
     std::string consumerKey="DADw7W9majB5gnDuSCsFFeyPL";
     std::string consumerSecret="fWwkjSaHEeCdvwOYZVUlIjO9uoVHrGR3CBbRBVzhFCt8BowUut";
-    //std::string consumerSecret="kAcSOqF21Fu85e7zjz7ZN2U4ZRhfV3WpwPAoE3Z7kBw";
     std::string accessToken="869274271155011585-pRNc6d0NWjQWe5091qFBc3ksM00KVM3";
     std::string accessSecret="7XdKp0PCLr5oXqHnBSLeY26nAcYpeVbTTPNnfDAj1GDB1";
-    //std::string accessSecret="LswwdoUaIvS8ltyTt5jkRh4J50vUPVVHtR2YPi5kE";
     std::string encodedAuth= consumerKey+":"+consumerSecret; //Base64 encoded consumerKey:consumerSecret
 };
 std::string accessKey="",oAuthSecret="",bearerToken="";
@@ -45,7 +33,6 @@ int main() {
     if(true) { //Ignore
         std::cout<<"Hello\n";
         stop1=getBearerToken(&accessKey);
-        //stop2=getOAuth(&oAuthToken);
         std::cout<<"\nStarting loop\n";
         while(!stop1) { //Come back and add stop2 for fun (get OAuth) which is now added in accessToken/accessSecret
             if((std::time(NULL) - time0)>=(900)) {//Get current time and check if 15 minutes have passed since last time
@@ -72,9 +59,6 @@ CURLcode getBearerToken(std::string* keyvar) {
     authencation credentials;
     std::string response;
     curl_slist_append(headers,"Content-Type: application/x-www-form-urlencoded;charset=UTF-8");
-    //curl_slist_append(headers,"Authorization: Basic d1dUaUQ0eVF2cVBXemcyNGdsVFdJcjRzOTp3QXlwTTlERXMzTjhWZzBOazZwdURtTEdsMjd2akpGTGEwVnNvVGp3czVxYThVZDV2YQ==");
-    //curl_slist_append(headers,"Content-Length: 29");
-    //curl_slist_append(headers,"Accept-Encoding: gzip");
     curl_easy_setopt(active,CURLOPT_HTTPHEADER,headers);
     curl_easy_setopt(active,CURLOPT_URL,"https://api.twitter.com/oauth2/token");
     curl_easy_setopt(active,CURLOPT_USERAGENT,"PostPirate v1.0");
@@ -94,7 +78,6 @@ CURLcode getBearerToken(std::string* keyvar) {
 }
 
 size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
-    //userdata=ptr;
     responseData+=ptr;
     std::cout<<responseData<<std::endl;
     std::cout<<size*nmemb<<std::endl;
@@ -170,30 +153,6 @@ CURLcode getTrendTweet(std::string trend, std::string* tweetvar) {
     return response_code;
 }
 
-CURLcode getOAuth(std::string* oTokenVar) {
-    CURL* active=curl_easy_init();
-    struct curl_slist *tokenheader=NULL;
-    authencation authStruct;
-    tokenheader=curl_slist_append(tokenheader,"oauth_callback=oob");
-    std::string ckHeader="oauth_consumer_key="+authStruct.consumerKey;
-    tokenheader=curl_slist_append(tokenheader,ckHeader.c_str());
-    tokenheader=curl_slist_append(tokenheader,"Accept: application/json");
-    tokenheader=curl_slist_append(tokenheader,"Accept-Charset: utf-8");
-    tokenheader=curl_slist_append(tokenheader,"Accept-Encoding: identity");   
-    curl_easy_setopt(active,CURLOPT_POSTFIELDS,"");
-    curl_easy_setopt(active,CURLOPT_URL,"https://api.twitter.com/oauth/request_token");
-    curl_easy_setopt(active,CURLOPT_USERAGENT,"PostPirate v1.0");
-    curl_easy_setopt(active,CURLOPT_WRITEFUNCTION,write_callback);
-    curl_easy_setopt(active,CURLOPT_VERBOSE,0);
-    curl_easy_setopt(active,CURLOPT_HTTPHEADER,tokenheader);
-    responseData.clear();
-    CURLcode response_code=curl_easy_perform(active);
-    if(!responseData.empty()&&response_code==NULL) {
-        std::cout<<">>>>>"<<responseData<<"<<<<<\n";
-    }
-    curl_easy_cleanup(active);
-    return response_code;
-}
 
 std::string hexStringtoASCII(std::string hexString) {
     std::string ASCII;
