@@ -26,7 +26,7 @@ CURLcode getBearerToken(std::string* keyvar); //Used for authencation when searc
 CURLcode getCurrentTrend(std::string* trendvar); //Sends API request to get a list of the current trends in a specific region, then parses out the first.
 CURLcode getTrendTweet(std::string trend, std::string* tweetvar); //Sends API request to search for tweets containing the current trend, then parses out the first.
 CURLcode postTrendTweet(std::string trendTweet); //Sends an API request to update the bot's twitter feed with the latest tweet regarding the latest trend (Without mentioning the original author)
-std::string parseTrendTweet(std::string trendTweet); //Parses out the tweet's reference to it's original author.
+std::string parseTrendTweet(std::string trendTweet); //Parses out the tweet's reference to it's original author or any other user.
 std::string hexStringtoASCII(std::string hexString); //Converts a string of hex values (from the HMAC-SHA1 function) into a string that contains the characters representative of those bytes. This is important for correct signature calculation.
 std::string getRandomString(); //Produces a random string for the nonce calculation.
 size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata); //Function needed by libcurl in order to read response data from a host.
@@ -40,7 +40,7 @@ struct authencation { //Parameters needed to successfully authencate bot; can be
     std::string consumerKey="(removed)";
     std::string consumerSecret="(removed)";
     std::string accessToken="(removed)";
-    std::string accessSecret="(removed)";    
+    std::string accessSecret="(removed)"; 
     std::string encodedAuth= consumerKey+":"+consumerSecret; //Base64 encoded consumerKey:consumerSecret
 };
 std::string accessKey="",oAuthSecret="",bearerToken="";
@@ -216,8 +216,11 @@ CURLcode postTrendTweet(std::string trendTweet) {
 
 std::string parseTrendTweet(std::string trendTweet) {
     std::cout<<"Parsing tweet before posting.\n";
-    while(trendTweet.find("RT @")!=std::string::npos) { //Find mentions and remove them
+    while(trendTweet.find("RT @")!=std::string::npos) { //Remove the author's reference
         trendTweet.erase(trendTweet.find("RT @"),trendTweet.find(":")+1);
+    }
+    while(trendTweet.find("@")!=std::string::npos) { //Remove any other references
+        trendTweet.erase(trendTweet.find("@"),1);
     }
     return trendTweet;
 }
