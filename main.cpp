@@ -30,17 +30,23 @@ std::string parseTrendTweet(std::string trendTweet); //Parses out the tweet's re
 std::string hexStringtoASCII(std::string hexString); //Converts a string of hex values (from the HMAC-SHA1 function) into a string that contains the characters representative of those bytes. This is important for correct signature calculation.
 std::string getRandomString(); //Produces a random string for the nonce calculation.
 size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata); //Function needed by libcurl in order to read response data from a host.
-std::time_t time0=NULL,time1=NULL; // Time1 - TimeNought = time in between
+std::time_t time0=0,time1=0; // Time1 - TimeNought = time in between
 float version=1.0; //@PostPirateBot version
 int delay=900; //Time between each tweet, in seconds.
 long woeID=23424977; //Where On Earth ID; where do we search for the top-trending terms?
 struct authencation { //Parameters needed to successfully authencate bot; can be obtained from apps.twitter.com
-    std::string user="PostPirateBot";
+    /*std::string user="PostPirateBot";
     std::string pass="(removed)";
     std::string consumerKey="(removed)";
     std::string consumerSecret="(removed)";
     std::string accessToken="(removed)";
-    std::string accessSecret="(removed)"; 
+    std::string accessSecret="(removed)";*/
+    std::string user="PostPirateBot";
+    std::string pass="3494279";
+    std::string consumerKey="DADw7W9majB5gnDuSCsFFeyPL";
+    std::string consumerSecret="fWwkjSaHEeCdvwOYZVUlIjO9uoVHrGR3CBbRBVzhFCt8BowUut";
+    std::string accessToken="869274271155011585-pRNc6d0NWjQWe5091qFBc3ksM00KVM3";
+    std::string accessSecret="7XdKp0PCLr5oXqHnBSLeY26nAcYpeVbTTPNnfDAj1GDB1";    
     std::string encodedAuth= consumerKey+":"+consumerSecret; //Base64 encoded consumerKey:consumerSecret
 };
 std::string accessKey="",oAuthSecret="",bearerToken="";
@@ -169,7 +175,7 @@ CURLcode getTrendTweet(std::string trend, std::string* tweetvar) {
     curl_easy_setopt(active,CURLOPT_HTTPHEADER,tokenheader);
     responseData.clear();
     CURLcode response_code=curl_easy_perform(active);
-    if(!responseData.empty()&&response_code==NULL) {
+    if(!responseData.empty()&&response_code==0) {
         *tweetvar=nlohmann::json::parse(responseData.c_str())["statuses"][0]["text"];
     }
     curl_easy_cleanup(active);
@@ -179,7 +185,7 @@ CURLcode getTrendTweet(std::string trend, std::string* tweetvar) {
 
 std::string hexStringtoASCII(std::string hexString) {
     std::string ASCII;
-    for(int x=0;x<hexString.length();x+=2) {
+    for(unsigned short x=0;x<hexString.length();x+=2) {
         char asciiCharacter=(char)(int)strtol(hexString.substr(x,2).c_str(),NULL,16);
         ASCII.push_back(asciiCharacter);
     }
