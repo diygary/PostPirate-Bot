@@ -31,6 +31,7 @@ std::string hexStringtoASCII(std::string hexString); //Converts a string of hex 
 std::string getRandomString(); //Produces a random string for the nonce calculation.
 size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata); //Function needed by libcurl in order to read response data from a host.
 std::time_t time0=0,time1=0; // Time1 - TimeNought = time in between
+std::time_t lastretry=0;
 float version=1.0; //@PostPirateBot version
 int delay=900; //Time between each tweet, in seconds.
 long woeID=23424977; //Where On Earth ID; where do we search for the top-trending terms?
@@ -52,7 +53,7 @@ struct authencation { //Parameters needed to successfully authencate bot; can be
 std::string accessKey="",oAuthSecret="",bearerToken="";
 std::string responseData="",oAuthToken="",oAuthAccessKey="";
 std::string previousTrendTweet="";
-bool verbose=false;
+bool verbose=true,retryrequest=false;
 int main() {
     short stop1;
     std::cout<<"Program running.\n";
@@ -62,16 +63,20 @@ int main() {
         while(!stop1) { //As long as obtaining the bearer token was successful:
             if((std::time(NULL) - time0)>=(delay)) {//Get current time and check if 15 minutes have passed since last time
                 std::string currentTrend="",currentTrendTweet="";
-                if(!getCurrentTrend(&currentTrend)) {
+                if(!getCurrentTrend(&currentTrend)&&!retryrequest) {
                     std::cout<<"Trend:"<<currentTrend<<std::endl;
-                    if(!getTrendTweet(currentTrend,&currentTrendTweet)) {
+                    if(!getTrendTweet(currentTrend,&currentTrendTweet)&&!retryrequest) {
                         std::cout<<"Trend Tweet:"<<currentTrendTweet<<std::endl;
                         if(currentTrendTweet!=previousTrendTweet) {
-                            if(!postTrendTweet(currentTrendTweet)) {
+                            if(!postTrendTweet(currentTrendTweet)&&!retryrequest) {
                                 std::cout<<"Posted a new status!\n";
                                 previousTrendTweet=currentTrendTweet;
                             } else {
                                 std::cout<<"Could not post, enable verbose.\n";
+                                if(retryrequest) {
+                                    retryrequest=false;
+                                    main();
+                                }
                             }
                         } else {
                             std::cout<<"Duplcate tweet error! (No new tweets)\n";
@@ -79,9 +84,23 @@ int main() {
                                 std::cout<<"Posted a new status!\n";
                             } else {
                                 std::cout<<"Could not post, enable verbose.\n";
+                                if(retryrequest) {
+                                    retryrequest=false;
+                                    main();
+                                }
                             }
                         }
                         currentTrendTweet.clear();
+                    } else {
+                        if(retryrequest) {
+                            retryrequest=false;
+                            main();
+                        }
+                    }
+                } else {
+                    if(retryrequest) {
+                        retryrequest=false;
+                        main();
                     }
                 }
                 time0 = std::time(NULL); //Reset timer
@@ -121,7 +140,9 @@ size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
 
 CURLcode getCurrentTrend(std::string* trendvar) {
     struct curl_slist *tokenheader=NULL;
+    long httpstatus_code=0;
     CURL* active=curl_easy_init();
+    retryrequest=false;
     std::string tokenheader_string="Authorization: Bearer "+bearerToken;
     tokenheader=curl_slist_append(tokenheader,tokenheader_string.c_str());
     tokenheader=curl_slist_append(tokenheader,"Accept: application/json");
@@ -136,8 +157,15 @@ CURLcode getCurrentTrend(std::string* trendvar) {
     curl_easy_setopt(active,CURLOPT_HTTPHEADER,tokenheader);
     responseData.clear();
     CURLcode response_code=curl_easy_perform(active);
-    if(!responseData.empty()&&response_code==0) {
+    curl_easy_getinfo(active,CURLINFO_RESPONSE_CODE,&httpstatus_code);
+    if(!responseData.empty()&&response_code==0&&httpstatus_code==200) {
         *trendvar=nlohmann::json::parse(responseData.c_str())[0]["trends"][0]["name"];
+    } else { //If something went wrong, try once more.
+        std::cout<<"Something went wrong while getting the current trend, trying again...\n";
+        if((std::time(NULL) - lastretry)>=900) { //If the last retry was 15 or more minutes ago, give it another try.
+            lastretry=std::time(NULL);
+            retryrequest=true;
+        }
     }
     curl_easy_cleanup(active);
     return response_code;
@@ -156,6 +184,8 @@ CURLcode getTrendTweet(std::string trend, std::string* tweetvar) {
     CURL* active=curl_easy_init();
     authencation authStruct;
     struct curl_slist *tokenheader=NULL;
+    long httpstatus_code=0;
+    retryrequest=false;
     std::string requestTime=std::to_string(static_cast<long>(std::time(NULL)));
     std::string randomString=getRandomString();
     tokenheader=curl_slist_append(tokenheader,"Content-Type: application/x-www-form-urlencoded");
@@ -175,8 +205,15 @@ CURLcode getTrendTweet(std::string trend, std::string* tweetvar) {
     curl_easy_setopt(active,CURLOPT_HTTPHEADER,tokenheader);
     responseData.clear();
     CURLcode response_code=curl_easy_perform(active);
-    if(!responseData.empty()&&response_code==0) {
+    curl_easy_getinfo(active,CURLINFO_RESPONSE_CODE,&httpstatus_code);
+    if(!responseData.empty()&&response_code==0&&httpstatus_code==200) {
         *tweetvar=nlohmann::json::parse(responseData.c_str())["statuses"][0]["text"];
+    } else { //If something went wrong, try once more.
+        std::cout<<"Something went wrong while getting the current trend tweet, trying again...\n";
+        if((std::time(NULL) - lastretry)>=900) { //If the last retry was 15 or more minutes ago, give it another try.
+            lastretry=std::time(NULL);
+            retryrequest=true;
+        }
     }
     curl_easy_cleanup(active);
     return response_code;
@@ -197,6 +234,7 @@ CURLcode postTrendTweet(std::string trendTweet) {
     CURL* active=curl_easy_init();
     authencation authStruct;
     struct curl_slist *tokenheader=NULL;
+    long httpstatus_code=200;
     std::string requestTime=std::to_string(static_cast<long>(std::time(NULL)));
     std::string randomString=getRandomString();
     tokenheader=curl_slist_append(tokenheader,"Content-Type: application/x-www-form-urlencoded");
@@ -216,6 +254,15 @@ CURLcode postTrendTweet(std::string trendTweet) {
     curl_easy_setopt(active,CURLOPT_HTTPHEADER,tokenheader);
     responseData.clear();
     CURLcode response_code=curl_easy_perform(active);
+    curl_easy_getinfo(active,CURLINFO_RESPONSE_CODE,&httpstatus_code);
+    if(httpstatus_code!=200) {
+        std::cout<<"Something went wrong while posting the tweet, let's see if I can try again...\n";
+        if((std::time(NULL) - lastretry)>=900) { //If the last retry was 15 or more minutes ago, give it another try.
+            lastretry=std::time(NULL);
+            retryrequest=true;
+            std::cout<<"Trying that once more!\n";
+        }
+    }
     curl_easy_cleanup(active);
     return response_code;
 }
