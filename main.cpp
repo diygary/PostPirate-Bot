@@ -50,7 +50,7 @@ struct authencation { //Parameters needed to successfully authencate bot; can be
     std::string consumerKey="(removed)";
     std::string consumerSecret="(removed)";
     std::string accessToken="(removed)";
-    std::string accessSecret="(removed)";
+    std::string accessSecret="(removed)";  
     std::string encodedAuth= consumerKey+":"+consumerSecret; //Base64 encoded consumerKey:consumerSecret
 };
 std::string accessKey="",oAuthSecret="",bearerToken="";

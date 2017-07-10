@@ -4,13 +4,13 @@
   <Project Name="KikBot" Path="../KikBot/KikBot.project" Active="No"/>
   <Project Name="ReceptionTest" Path="ReceptionTest/ReceptionTest.project" Active="No"/>
   <BuildMatrix>
-    <WorkspaceConfiguration Name="Debug" Selected="yes">
+    <WorkspaceConfiguration Name="Debug" Selected="no">
       <Environment/>
       <Project Name="TwitterBot" ConfigName="Debug"/>
       <Project Name="ReceptionTest" ConfigName="Debug"/>
       <Project Name="KikBot" ConfigName="Debug"/>
     </WorkspaceConfiguration>
-    <WorkspaceConfiguration Name="Release" Selected="no">
+    <WorkspaceConfiguration Name="Release" Selected="yes">
       <Environment/>
       <Project Name="TwitterBot" ConfigName="Release"/>
       <Project Name="ReceptionTest" ConfigName="Release"/>

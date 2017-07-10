@@ -1,1 +1,1 @@
-./Debug/main.cpp.o ./Debug/sha1.cpp.o
+./Release/main.cpp.o ./Release/sha1.cpp.o
