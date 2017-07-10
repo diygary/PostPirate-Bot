@@ -8,10 +8,10 @@ The bot searches for and re-posts the latest tweets that
 contain the latest top-trending term in a specific region.
  
 This program uses the following libraries:
-libcurl
-nlohmann's JSON
-Portable C++ Hashing Library
-CPPCodec base64 library
+'libcurl'
+'nlohmann's JSON'
+'Portable C++ Hashing Library'
+'CPPCodec base64 library'
 
  
 
