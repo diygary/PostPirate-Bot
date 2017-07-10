@@ -13,8 +13,16 @@
  * Portable C++ Hashing Library
  * CPPCodec base64 library
  */
+ 
+ /*Next update(s):
+  * Logging feature that saves to file (3/4 - priority)
+  * Fix bug related to falsely reported successful retries. (2 - priority) (prechk)
+  * Adjust user-agent code (3/4 - priority)
+  * Parse out hashtags (1 - priority) (prchk)
+  */
 
 #include <iostream>
+#include <fstream>
 #include <string>
 #include "json.hpp"
 #include "hmac.h"
@@ -30,9 +38,10 @@ std::string parseTrendTweet(std::string trendTweet); //Parses out the tweet's re
 std::string hexStringtoASCII(std::string hexString); //Converts a string of hex values (from the HMAC-SHA1 function) into a string that contains the characters representative of those bytes. This is important for correct signature calculation.
 std::string getRandomString(); //Produces a random string for the nonce calculation.
 size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata); //Function needed by libcurl in order to read response data from a host.
+void updateLogFile(std::string data); //Logs every request made by the bot in a file called 'postpirate.log' in it's directory.
 std::time_t time0=0,time1=0; // Time1 - TimeNought = time in between
-std::time_t lastretry=0;
-float version=1.0; //@PostPirateBot version
+std::time_t lastretry=0; //If a request fails (bad response code), the bot will try once more in that 15 minute window.
+float version=1.2; //@PostPirateBot version
 int delay=900; //Time between each tweet, in seconds.
 long woeID=23424977; //Where On Earth ID; where do we search for the top-trending terms?
 struct authencation { //Parameters needed to successfully authencate bot; can be obtained from apps.twitter.com
@@ -53,10 +62,13 @@ struct authencation { //Parameters needed to successfully authencate bot; can be
 std::string accessKey="",oAuthSecret="",bearerToken="";
 std::string responseData="",oAuthToken="",oAuthAccessKey="";
 std::string previousTrendTweet="";
-bool verbose=true,retryrequest=false;
+std::string useragent="";
+bool enableVerbose=true,enableLogging=true,retryrequest=false;
 int main() {
+    useragent=std::string("PostPirate v")+std::to_string(version);
     short stop1;
     std::cout<<"Program running.\n";
+    updateLogFile("Program is now running.");
     if(true) { //Ignore this.
         std::cout<<"Obtaining bearer token.\n";
         stop1=getBearerToken(&accessKey);
@@ -118,12 +130,12 @@ CURLcode getBearerToken(std::string* keyvar) {
     curl_slist_append(headers,"Content-Type: application/x-www-form-urlencoded;charset=UTF-8");
     curl_easy_setopt(active,CURLOPT_HTTPHEADER,headers);
     curl_easy_setopt(active,CURLOPT_URL,"https://api.twitter.com/oauth2/token");
-    curl_easy_setopt(active,CURLOPT_USERAGENT,"PostPirate v"+std::to_string(version));
+    curl_easy_setopt(active,CURLOPT_USERAGENT,useragent.c_str());
     curl_easy_setopt(active,CURLOPT_HTTPAUTH,CURLAUTH_BASIC);
     curl_easy_setopt(active,CURLOPT_USERPWD,credentials.encodedAuth.c_str());
     curl_easy_setopt(active,CURLOPT_POSTFIELDS,"grant_type=client_credentials");
     curl_easy_setopt(active,CURLOPT_WRITEFUNCTION,write_callback);
-    curl_easy_setopt(active,CURLOPT_VERBOSE,verbose);
+    curl_easy_setopt(active,CURLOPT_VERBOSE,enableVerbose);
     responseData.clear();
     CURLcode response_code=curl_easy_perform(active);
     if(!responseData.empty()) {
@@ -135,6 +147,7 @@ CURLcode getBearerToken(std::string* keyvar) {
 
 size_t write_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
     responseData+=ptr;
+    updateLogFile(responseData);
     return size*nmemb;
 }
 
@@ -151,9 +164,9 @@ CURLcode getCurrentTrend(std::string* trendvar) {
     curl_easy_setopt(active,CURLOPT_HTTPGET,1L);
     std::string url=std::string("https://api.twitter.com/1.1/trends/place.json?id=")+std::to_string(woeID);
     curl_easy_setopt(active,CURLOPT_URL,url.c_str());
-    curl_easy_setopt(active,CURLOPT_USERAGENT,"PostPirate v"+std::to_string(version));
+    curl_easy_setopt(active,CURLOPT_USERAGENT,useragent.c_str());
     curl_easy_setopt(active,CURLOPT_WRITEFUNCTION,write_callback);
-    curl_easy_setopt(active,CURLOPT_VERBOSE,verbose);
+    curl_easy_setopt(active,CURLOPT_VERBOSE,enableVerbose);
     curl_easy_setopt(active,CURLOPT_HTTPHEADER,tokenheader);
     responseData.clear();
     CURLcode response_code=curl_easy_perform(active);
@@ -165,6 +178,9 @@ CURLcode getCurrentTrend(std::string* trendvar) {
         if((std::time(NULL) - lastretry)>=900) { //If the last retry was 15 or more minutes ago, give it another try.
             lastretry=std::time(NULL);
             retryrequest=true;
+            std::cout<<"Trying again!\n";
+        } else {
+            std::cout<<"Could not retry: Last retry was less than 15 minutes ago, retrying later. Ignore next message!\n";
         }
     }
     curl_easy_cleanup(active);
@@ -199,9 +215,9 @@ CURLcode getTrendTweet(std::string trend, std::string* tweetvar) {
     tokenheader=curl_slist_append(tokenheader,oAuthHeader.c_str());
     curl_easy_setopt(active,CURLOPT_HTTPGET,1L);
     curl_easy_setopt(active,CURLOPT_URL,host.c_str());
-    curl_easy_setopt(active,CURLOPT_USERAGENT,"PostPirate v"+std::to_string(version));
+    curl_easy_setopt(active,CURLOPT_USERAGENT,useragent.c_str());
     curl_easy_setopt(active,CURLOPT_WRITEFUNCTION,write_callback);
-    curl_easy_setopt(active,CURLOPT_VERBOSE,verbose);
+    curl_easy_setopt(active,CURLOPT_VERBOSE,enableVerbose);
     curl_easy_setopt(active,CURLOPT_HTTPHEADER,tokenheader);
     responseData.clear();
     CURLcode response_code=curl_easy_perform(active);
@@ -213,6 +229,9 @@ CURLcode getTrendTweet(std::string trend, std::string* tweetvar) {
         if((std::time(NULL) - lastretry)>=900) { //If the last retry was 15 or more minutes ago, give it another try.
             lastretry=std::time(NULL);
             retryrequest=true;
+            std::cout<<"Trying again!\n";
+        } else {
+            std::cout<<"Could not retry: Last retry was less than 15 minutes ago, retrying later. Ignore next message!\n";
         }
     }
     curl_easy_cleanup(active);
@@ -248,9 +267,9 @@ CURLcode postTrendTweet(std::string trendTweet) {
     tokenheader=curl_slist_append(tokenheader,oAuthHeader.c_str());
     curl_easy_setopt(active,CURLOPT_POSTFIELDS,postStatusData.c_str());
     curl_easy_setopt(active,CURLOPT_URL,host_baseURL.c_str());
-    curl_easy_setopt(active,CURLOPT_USERAGENT,"PostPirate v"+std::to_string(version));
+    curl_easy_setopt(active,CURLOPT_USERAGENT,useragent.c_str());
     curl_easy_setopt(active,CURLOPT_WRITEFUNCTION,write_callback);
-    curl_easy_setopt(active,CURLOPT_VERBOSE,verbose);
+    curl_easy_setopt(active,CURLOPT_VERBOSE,enableVerbose);
     curl_easy_setopt(active,CURLOPT_HTTPHEADER,tokenheader);
     responseData.clear();
     CURLcode response_code=curl_easy_perform(active);
@@ -260,7 +279,9 @@ CURLcode postTrendTweet(std::string trendTweet) {
         if((std::time(NULL) - lastretry)>=900) { //If the last retry was 15 or more minutes ago, give it another try.
             lastretry=std::time(NULL);
             retryrequest=true;
-            std::cout<<"Trying that once more!\n";
+            std::cout<<"Trying again!\n";
+        } else {
+            std::cout<<"Could not retry: Last retry was less than 15 minutes ago, retrying later. Ignore next message!";
         }
     }
     curl_easy_cleanup(active);
@@ -275,6 +296,27 @@ std::string parseTrendTweet(std::string trendTweet) {
     while(trendTweet.find("@")!=std::string::npos) { //Remove any other references
         trendTweet.erase(trendTweet.find("@"),1);
     }
+    while(trendTweet.find("#")!=std::string::npos) { //Remove any hashtags in the post.
+        if(trendTweet.find(" ",trendTweet.find("#"))!=std::string::npos) { 
+            trendTweet.erase(trendTweet.find("#"),trendTweet.find(" ",trendTweet.find("#"))); 
+        } else { //If there's no space after the hashtag, the hashtag must be at the end of the post.
+            trendTweet.erase(trendTweet.find("#"),trendTweet.length());
+        }
+    }
     return trendTweet;
 }
 
+void updateLogFile(std::string data) {
+    if(enableLogging) {
+        std::string timestamp=std::string("[")+std::to_string(std::time(NULL))+std::string("]");
+        data.insert(0,timestamp);
+        std::ofstream logger;
+        logger.open("postpirate.log",std::ofstream::app | std::ofstream::out);
+        if(logger.good()) {
+            logger<<data;
+            logger.close();
+        } else {
+            std::cout<<"Could not update log file, try checking permissions.\n";
+        }
+    }
+}

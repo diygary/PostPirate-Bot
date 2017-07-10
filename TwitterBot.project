@@ -8,6 +8,7 @@
     <File Name="sha1.cpp"/>
     <File Name="hash.h"/>
     <File Name="hmac.h"/>
+    <File Name="changelog.txt"/>
   </VirtualDirectory>
   <Settings Type="Executable">
     <GlobalSettings>

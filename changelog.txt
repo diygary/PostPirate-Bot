@@ -1,0 +1,7 @@
+v1.2
+Added functionality to parse out hashtags
+Added functionality to save all logs to a file.
+Fix bug related to falsely reported successful retries of a request.
+Adjusted code for USER-AGENT generation.
+v1.1
+Fixed bug where segment fault would occur due to a bad server response.
