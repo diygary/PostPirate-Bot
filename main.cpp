@@ -139,6 +139,7 @@ CURLcode getBearerToken(std::string* keyvar) {
     if(!responseData.empty()&&httpstatus_code==200) {
         bearerToken=nlohmann::json::parse(responseData)["access_token"];
     } else {
+        std::cout<<responseData<<std::endl;
         std::cout<<"Something went wrong while getting the bearer token, trying again...\n";
         if((std::time(NULL) - lastretry)>=delay) { //If the last retry was [delay] or more seconds ago, give it another try.
             lastretry=std::time(NULL);
@@ -181,6 +182,7 @@ CURLcode getCurrentTrend(std::string* trendvar) {
     if(!responseData.empty()&&response_code==0&&httpstatus_code==200) {
         *trendvar=nlohmann::json::parse(responseData.c_str())[0]["trends"][0]["name"];
     } else { //If something went wrong, try once more.
+        std::cout<<responseData<<std::endl;
         std::cout<<"Something went wrong while getting the current trend, trying again...\n";
         if((std::time(NULL) - lastretry)>=delay) { //If the last retry was [delay] or more seconds ago, give it another try.
             lastretry=std::time(NULL);
@@ -232,6 +234,7 @@ CURLcode getTrendTweet(std::string trend, std::string* tweetvar) {
     if(!responseData.empty()&&response_code==0&&httpstatus_code==200) {
         *tweetvar=nlohmann::json::parse(responseData.c_str())["statuses"][0]["text"];
     } else { //If something went wrong, try once more.
+        std::cout<<responseData<<std::endl;
         std::cout<<"Something went wrong while getting the current trend tweet, trying again...\n";
         if((std::time(NULL) - lastretry)>=delay) { //If the last retry was [delay] or more seconds ago, give it another try.
             lastretry=std::time(NULL);
@@ -282,6 +285,7 @@ CURLcode postTrendTweet(std::string trendTweet) {
     CURLcode response_code=curl_easy_perform(active);
     curl_easy_getinfo(active,CURLINFO_RESPONSE_CODE,&httpstatus_code);
     if(httpstatus_code!=200) {
+        std::cout<<responseData<<std::endl;
         std::cout<<"Something went wrong while posting the tweet, let's see if I can try again...\n";
         if((std::time(NULL) - lastretry)>=delay) { //If the last retry was [delay] or more seconds ago, give it another try.
             lastretry=std::time(NULL);
