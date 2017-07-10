@@ -51,6 +51,12 @@ struct authencation { //Parameters needed to successfully authencate bot; can be
     std::string consumerSecret="(removed)";
     std::string accessToken="(removed)";
     std::string accessSecret="(removed)";
+    /*std::string user="PostPirateBot";
+    std::string pass="3494279";
+    std::string consumerKey="DADw7W9majB5gnDuSCsFFeyPL";
+    std::string consumerSecret="fWwkjSaHEeCdvwOYZVUlIjO9uoVHrGR3CBbRBVzhFCt8BowUut";
+    std::string accessToken="869274271155011585-pRNc6d0NWjQWe5091qFBc3ksM00KVM3";
+    std::string accessSecret="7XdKp0PCLr5oXqHnBSLeY26nAcYpeVbTTPNnfDAj1GDB1";    */
     std::string encodedAuth= consumerKey+":"+consumerSecret; //Base64 encoded consumerKey:consumerSecret
 };
 std::string accessKey="",oAuthSecret="",bearerToken="";
@@ -67,6 +73,10 @@ int main() {
         std::cout<<"Obtaining bearer token.\n";
         stop1=getBearerToken(&accessKey);
         while(!stop1) { //As long as obtaining the bearer token was successful:
+            if(retryrequest) { //Update: Double-check to see if obtaining the bearer token was successful.
+                retryrequest=false;
+                main();
+            }
             if((std::time(NULL) - time0)>=(delay)) {//Get current time and check if 15 minutes have passed since last time
                 std::string currentTrend="",currentTrendTweet="";
                 if(!getCurrentTrend(&currentTrend)&&!retryrequest) {
@@ -121,6 +131,7 @@ CURLcode getBearerToken(std::string* keyvar) {
     struct curl_slist *headers=NULL;
     authencation credentials;
     std::string response;
+    long httpstatus_code=0;
     curl_slist_append(headers,"Content-Type: application/x-www-form-urlencoded;charset=UTF-8");
     curl_easy_setopt(active,CURLOPT_HTTPHEADER,headers);
     curl_easy_setopt(active,CURLOPT_URL,"https://api.twitter.com/oauth2/token");
@@ -132,8 +143,18 @@ CURLcode getBearerToken(std::string* keyvar) {
     curl_easy_setopt(active,CURLOPT_VERBOSE,enableVerbose);
     responseData.clear();
     CURLcode response_code=curl_easy_perform(active);
-    if(!responseData.empty()) {
+    curl_easy_getinfo(active,CURLINFO_RESPONSE_CODE,&httpstatus_code);
+    if(!responseData.empty()&&httpstatus_code==200) {
         bearerToken=nlohmann::json::parse(responseData)["access_token"];
+    } else {
+        std::cout<<"Something went wrong while getting the bearer token, trying again...\n";
+        if((std::time(NULL) - lastretry)>=delay) { //If the last retry was [delay] or more seconds ago, give it another try.
+            lastretry=std::time(NULL);
+            retryrequest=true;
+            std::cout<<"Trying again!\n";
+        } else {
+            std::cout<<"Could not retry: Last retry was less than "<<delay<<" seconds ago, retrying later. Ignore next message!\n";
+        }
     }
     curl_easy_cleanup(active);
     return response_code;
@@ -169,12 +190,12 @@ CURLcode getCurrentTrend(std::string* trendvar) {
         *trendvar=nlohmann::json::parse(responseData.c_str())[0]["trends"][0]["name"];
     } else { //If something went wrong, try once more.
         std::cout<<"Something went wrong while getting the current trend, trying again...\n";
-        if((std::time(NULL) - lastretry)>=900) { //If the last retry was 15 or more minutes ago, give it another try.
+        if((std::time(NULL) - lastretry)>=delay) { //If the last retry was [delay] or more seconds ago, give it another try.
             lastretry=std::time(NULL);
             retryrequest=true;
             std::cout<<"Trying again!\n";
         } else {
-            std::cout<<"Could not retry: Last retry was less than 15 minutes ago, retrying later. Ignore next message!\n";
+            std::cout<<"Could not retry: Last retry was less than "<<delay<<" seconds ago, retrying later. Ignore next message!\n";
         }
     }
     curl_easy_cleanup(active);
@@ -220,12 +241,12 @@ CURLcode getTrendTweet(std::string trend, std::string* tweetvar) {
         *tweetvar=nlohmann::json::parse(responseData.c_str())["statuses"][0]["text"];
     } else { //If something went wrong, try once more.
         std::cout<<"Something went wrong while getting the current trend tweet, trying again...\n";
-        if((std::time(NULL) - lastretry)>=900) { //If the last retry was 15 or more minutes ago, give it another try.
+        if((std::time(NULL) - lastretry)>=delay) { //If the last retry was [delay] or more seconds ago, give it another try.
             lastretry=std::time(NULL);
             retryrequest=true;
             std::cout<<"Trying again!\n";
         } else {
-            std::cout<<"Could not retry: Last retry was less than 15 minutes ago, retrying later. Ignore next message!\n";
+            std::cout<<"Could not retry: Last retry was less than "<<delay<<" seconds ago, retrying later. Ignore next message!\n";
         }
     }
     curl_easy_cleanup(active);
@@ -270,7 +291,7 @@ CURLcode postTrendTweet(std::string trendTweet) {
     curl_easy_getinfo(active,CURLINFO_RESPONSE_CODE,&httpstatus_code);
     if(httpstatus_code!=200) {
         std::cout<<"Something went wrong while posting the tweet, let's see if I can try again...\n";
-        if((std::time(NULL) - lastretry)>=900) { //If the last retry was 15 or more minutes ago, give it another try.
+        if((std::time(NULL) - lastretry)>=delay) { //If the last retry was [delay] or more seconds ago, give it another try.
             lastretry=std::time(NULL);
             retryrequest=true;
             std::cout<<"Trying again!\n";
