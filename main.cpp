@@ -45,18 +45,12 @@ float version=1.2; //@PostPirateBot version
 int delay=900; //Time between each tweet, in seconds.
 long woeID=23424977; //Where On Earth ID; where do we search for the top-trending terms?
 struct authencation { //Parameters needed to successfully authencate bot; can be obtained from apps.twitter.com
-    /*std::string user="PostPirateBot";
+    std::string user="PostPirateBot";
     std::string pass="(removed)";
     std::string consumerKey="(removed)";
     std::string consumerSecret="(removed)";
     std::string accessToken="(removed)";
-    std::string accessSecret="(removed)";*/
-    std::string user="PostPirateBot";
-    std::string pass="3494279";
-    std::string consumerKey="DADw7W9majB5gnDuSCsFFeyPL";
-    std::string consumerSecret="fWwkjSaHEeCdvwOYZVUlIjO9uoVHrGR3CBbRBVzhFCt8BowUut";
-    std::string accessToken="869274271155011585-pRNc6d0NWjQWe5091qFBc3ksM00KVM3";
-    std::string accessSecret="7XdKp0PCLr5oXqHnBSLeY26nAcYpeVbTTPNnfDAj1GDB1";    
+    std::string accessSecret="(removed)";
     std::string encodedAuth= consumerKey+":"+consumerSecret; //Base64 encoded consumerKey:consumerSecret
 };
 std::string accessKey="",oAuthSecret="",bearerToken="";
